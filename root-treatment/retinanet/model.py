@@ -3,10 +3,10 @@ import torch
 import math
 import time
 import torch.utils.model_zoo as model_zoo
-from utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
-from anchors import Anchors
-import losses
-from lib.nms.pth_nms import pth_nms
+from .utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
+from .anchors import Anchors
+from .losses import FocalLoss
+from .lib.nms.pth_nms import pth_nms
 
 def nms(dets, thresh):
     "Dispatch to either CPU or GPU NMS implementations. Accept dets as tensor"
@@ -187,7 +187,7 @@ class ResNet(nn.Module):
 
         self.clipBoxes = ClipBoxes()
         
-        self.focalLoss = losses.FocalLoss()
+        self.focalLoss = FocalLoss()
                 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):

@@ -21,10 +21,23 @@ RETINA_CLASSES = {
 def convert_voc_2_retina(anno, class_mapping):
     names = []
     bboxes = []
+    
+    if isinstance(anno['annotation']['object'], list):
+        for obj in anno['annotation']['object']:
+            names.append(obj['name'])
 
-    for obj in anno['annotation']['object']:
+            box = obj['bndbox']
+            bboxes.append([
+                int(box['xmin']),
+                int(box['ymin']),
+                int(box['xmax']),
+                int(box['ymax'])
+            ])
+    else:
+        obj = anno['annotation']['object']
+        
         names.append(obj['name'])
-            
+
         box = obj['bndbox']
         bboxes.append([
             int(box['xmin']),
@@ -36,7 +49,7 @@ def convert_voc_2_retina(anno, class_mapping):
     classes = torch.tensor([class_mapping[name] for name in names], dtype=torch.long)
     
     # TODO : convert bbox format here, if needed
-    bboxes = torch.tensor(bboxes, dtype=torch.float32)
+    bboxes = torch.tensor(bboxes, dtype=torch.long)
     
     return classes, bboxes
 
@@ -113,10 +126,11 @@ class VOCDetection(VisionDataset):
             ET.parse(self.annotations[index]).getroot())
         
         anno = convert_voc_2_retina(target, RETINA_CLASSES)
-        print('anno: {}'.format(anno))
+        
+        # print('anno: {}'.format(anno))
+        
         if self.transforms is not None:
-            # TODO : support anno transform
-            img = self.transforms(img)
+            img, anno = self.transforms(img, anno)
 
         return img, anno
 
