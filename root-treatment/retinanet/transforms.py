@@ -7,7 +7,7 @@ import imgaug as ia
 import imgaug.augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 
-# ​数据格式：anno: (tensor([0, 1]), tensor([[364., 167., 487., 402.], [350.,  85., 488., 401.]]))
+# 数据格式：anno: (tensor([0, 1]), tensor([[x1, y1, x2, y2], [364., 167., 487., 402.], [350.,  85., 488., 401.]]), {scale, pad_loc})
 # 调用格式：img, anno = self.transforms(img, anno)
 
 
@@ -17,9 +17,9 @@ class Resize(object):
         self.h = h
 
     def __call__(self, img, anno):
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
+        scale = self.h / np_img.shape[0]
 
         # get BoundingBoxesOnImage
         bbs = []
@@ -42,52 +42,15 @@ class Resize(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        anno[2]["scale"] = scale
+        return image_aug, (anno[0], gts, anno[2])
 
-class RandomCropAndPad(object):
-    def __init__(self, percent=0.1):
-        self.percent = percent
-
-    def __call__(self, img, anno):
-        labels = anno[0].numpy()
-        gts = anno[1].numpy()
-        np_img = np.asarray(img)
-
-        # get BoundingBoxesOnImage
-        bbs = []
-        for gt in gts:
-            bbs.append(BoundingBox(x1=gt[0], y1=gt[1], x2=gt[2], y2=gt[3]))
-
-        bbs_on_img = BoundingBoxesOnImage(bbs, shape=np_img.shape)
-        # draw_img = bbs_on_img.draw_on_image(np_img, size=2)
-
-        r = np.random.sample()
-        p = -self.percent + 2 * self.percent * r
-
-        self.seq = iaa.Sequential([
-            iaa.CropAndPad(
-                percent=p,
-                keep_size=False
-            )
-        ])
-
-        # apply augment
-        image_aug = self.seq.augment_image(np_img)
-        bbs_aug = self.seq.augment_bounding_boxes(bbs_on_img).bounding_boxes
-
-        gts = []
-        for bb in bbs_aug:
-            gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
-
-        gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
 
 class Rotate(object):
     def __init__(self, degree):
         self.degree = degree
 
     def __call__(self, img, anno):
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -110,7 +73,7 @@ class Rotate(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        return image_aug, (anno[0], gts, anno[2])
 
 
 class RandomRotate(object):
@@ -118,7 +81,6 @@ class RandomRotate(object):
         self.degree = degree
 
     def __call__(self, img, anno):
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -143,7 +105,7 @@ class RandomRotate(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        return image_aug, (anno[0], gts, anno[2])
 
 
 class RandomTranslatePx(object):
@@ -152,7 +114,6 @@ class RandomTranslatePx(object):
         self.y = y
 
     def __call__(self, img, anno):
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -179,7 +140,7 @@ class RandomTranslatePx(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        return image_aug, (anno[0], gts, anno[2])
 
 
 class RandomTranslatePc(object):
@@ -188,7 +149,6 @@ class RandomTranslatePc(object):
         self.y = y
 
     def __call__(self, img, anno):
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -214,7 +174,7 @@ class RandomTranslatePc(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        return image_aug, (anno[0], gts, anno[2])
 
 
 class RandomFlipLeftRight(object):
@@ -225,7 +185,6 @@ class RandomFlipLeftRight(object):
         if np.random.random_sample() > self.probability:
             return img, anno
 
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -250,7 +209,7 @@ class RandomFlipLeftRight(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        return image_aug, (anno[0], gts, anno[2])
 
 
 class RandomFlipUpDown(object):
@@ -261,7 +220,6 @@ class RandomFlipUpDown(object):
         if np.random.random_sample() > self.probability:
             return img, anno
 
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -286,7 +244,7 @@ class RandomFlipUpDown(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        return image_aug, (anno[0], gts, anno[2])
 
 
 class RandomSaltPepperNoise(object):
@@ -442,7 +400,6 @@ class Pad(object):
         self.position = position
 
     def __call__(self, img, anno):
-        labels = anno[0].numpy()
         gts = anno[1].numpy()
         np_img = np.asarray(img)
 
@@ -460,6 +417,15 @@ class Pad(object):
             length = height
         else:
             length = width
+        
+        # get pad loc, up, down, left, right
+        pad_loc = [0, 0, 0, 0]
+        if self.position == "center":
+            if height >= width:
+                pad_loc[2] = pad_loc[3] = (height - width) / 2
+            else:
+                pad_loc[0] = pad_loc[1] = (width - height) / 2
+            
         # position is must, because the bbs and images are augmented separately
         self.seq = iaa.Sequential([
             iaa.PadToFixedSize(width=length, height=length, position=self.position)
@@ -474,7 +440,8 @@ class Pad(object):
             gts.append([bb.x1, bb.y1, bb.x2, bb.y2])
 
         gts = torch.from_numpy(np.array(gts))
-        return image_aug, (anno[0], gts)
+        anno[2]["pad_loc"] = pad_loc
+        return image_aug, (anno[0], gts, anno[2])
 
 
 def show_bbs(img, anno):
