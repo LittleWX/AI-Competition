@@ -51,7 +51,8 @@ def convert_voc_2_retina(anno, class_mapping):
     # TODO : convert bbox format here, if needed
     bboxes = torch.tensor(bboxes, dtype=torch.long)
     
-    return classes, bboxes
+    # return an empty dict for transform meta-data
+    return classes, bboxes, {}
 
 # customized collate() for multi-bbox sample
 def collate(samples):
