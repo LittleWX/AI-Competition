@@ -160,6 +160,7 @@ class ClassificationModel(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, num_classes, block, layers):
+        self.nms = 0.8
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -273,11 +274,15 @@ class ResNet(nn.Module):
             transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
             scores = scores[:, scores_over_thresh, :]
 
-            anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
+#             anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.8)
+            anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], self.nms)
 
             nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
 
             return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
+        
+    def set_nms(self, nms):
+        self.nms = nms
 
 
 
