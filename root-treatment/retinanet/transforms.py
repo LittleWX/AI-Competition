@@ -75,6 +75,43 @@ class Rotate(object):
         gts = torch.from_numpy(np.array(gts))
         return image_aug, (anno[0], gts, anno[2])
 
+class RandomCropAndPad(object):	
+    def __init__(self, percent=0.1):	
+        self.percent = percent	
+
+    def __call__(self, img, anno):	
+        labels = anno[0].numpy()	
+        gts = anno[1].numpy()	
+        np_img = np.asarray(img)	
+
+        # get BoundingBoxesOnImage	
+        bbs = []	
+        for gt in gts:	
+            bbs.append(BoundingBox(x1=gt[0], y1=gt[1], x2=gt[2], y2=gt[3]))	
+
+        bbs_on_img = BoundingBoxesOnImage(bbs, shape=np_img.shape)	
+        # draw_img = bbs_on_img.draw_on_image(np_img, size=2)	
+
+        r = np.random.sample()	
+        p = -self.percent + 2 * self.percent * r	
+
+        self.seq = iaa.Sequential([	
+            iaa.CropAndPad(	
+                percent=p,	
+                keep_size=False	
+            )	
+        ])	
+
+         # apply augment	
+        image_aug = self.seq.augment_image(np_img)	
+        bbs_aug = self.seq.augment_bounding_boxes(bbs_on_img).bounding_boxes	
+
+        gts = []	
+        for bb in bbs_aug:	
+            gts.append([bb.x1, bb.y1, bb.x2, bb.y2])	
+
+        gts = torch.from_numpy(np.array(gts))	
+        return image_aug, (anno[0], gts, anno[2])
 
 class RandomRotate(object):
     def __init__(self, degree):
